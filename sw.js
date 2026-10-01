@@ -1,11 +1,14 @@
-// Offline support: serve the app shell from cache, refresh it in the background.
-// Bump CACHE when shipping changes so old files get cleared.
-const CACHE = 'planner-v1';
+// Offline support. Online: always fetch fresh files and update the cache.
+// Offline: serve the cached copy. Bump CACHE to clear old files.
+const CACHE = 'planner-v2';
 const SHELL = [
   './',
   'index.html',
   'styles.css',
+  'config.js',
   'app.js',
+  'cloud.js',
+  'vendor/supabase-2.117.2.js',
   'manifest.webmanifest',
   'icons/icon.svg',
   'icons/icon-192.png',
@@ -27,18 +30,18 @@ self.addEventListener('activate', event => {
 
 self.addEventListener('fetch', event => {
   const req = event.request;
+  // Only handle this site's own files. Supabase API calls go straight to the network.
   if (req.method !== 'GET' || new URL(req.url).origin !== location.origin) return;
 
   event.respondWith(
-    caches.open(CACHE).then(async cache => {
-      const cached = await cache.match(req, { ignoreSearch: true });
-      const network = fetch(req)
-        .then(res => {
-          if (res.ok) cache.put(req, res.clone());
-          return res;
-        })
-        .catch(() => cached);
-      return cached || network;
-    })
+    fetch(req)
+      .then(res => {
+        if (res.ok) {
+          const copy = res.clone();
+          caches.open(CACHE).then(c => c.put(req, copy));
+        }
+        return res;
+      })
+      .catch(async () => (await caches.match(req, { ignoreSearch: true })) || caches.match('./'))
   );
 });

@@ -2,7 +2,8 @@
 
 /* ============================================================
    Project Planner: a kanban board for projects and clients.
-   All data lives in localStorage on this device.
+   Data is cached in localStorage on this device. When Supabase is
+   configured, cloud.js syncs it across devices.
    ============================================================ */
 
 const STORAGE_KEY = 'planner.v1';
@@ -19,6 +20,16 @@ const PALETTE = ['#2f5bea', '#e0702b', '#1f9d6b', '#c2389b', '#7a4fd6', '#d4a514
 
 const $ = (sel, root = document) => root.querySelector(sel);
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+
+/* ---------- Sync hooks ----------
+   Every change to a client or project is reported here.
+   cloud.js fills these in when Supabase is configured. */
+
+const sync = {
+  changed(table, id) {},
+  removed(table, id) {},
+  signOut() {},
+};
 
 /* ---------- State ---------- */
 
@@ -45,7 +56,13 @@ function normalize(data) {
   const validStatus = new Set(COLUMNS.map(c => c.id));
   s.clients = (Array.isArray(data.clients) ? data.clients : [])
     .filter(c => c && c.id && c.name)
-    .map(c => ({ id: String(c.id), name: String(c.name), color: c.color || PALETTE[0] }));
+    .map(c => ({
+      id: String(c.id),
+      name: String(c.name),
+      color: c.color || PALETTE[0],
+      createdAt: c.createdAt || new Date().toISOString(),
+      updatedAt: c.updatedAt || new Date().toISOString(),
+    }));
   const clientIds = new Set(s.clients.map(c => c.id));
   s.projects = (Array.isArray(data.projects) ? data.projects : [])
     .filter(p => p && p.id && p.title)
@@ -278,13 +295,16 @@ projectForm.addEventListener('submit', e => {
     const p = state.projects.find(x => x.id === editingId);
     if (p.status !== data.status) data.order = nextOrder(data.status);
     Object.assign(p, data);
+    sync.changed('projects', p.id);
   } else {
+    const id = uid();
     state.projects.push({
-      id: uid(),
+      id,
       ...data,
       order: nextOrder(data.status),
       createdAt: data.updatedAt,
     });
+    sync.changed('projects', id);
   }
   save();
   render();
@@ -295,6 +315,7 @@ $('#deleteProjectBtn').addEventListener('click', () => {
   const p = state.projects.find(x => x.id === editingId);
   if (!p || !confirm(`Delete "${p.title}"?`)) return;
   state.projects = state.projects.filter(x => x.id !== editingId);
+  sync.removed('projects', editingId);
   save();
   render();
   projectDialog.close();
@@ -310,8 +331,10 @@ function nextOrder(status) {
 const clientsDialog = $('#clientsDialog');
 
 function addClient(name) {
-  const client = { id: uid(), name, color: PALETTE[state.clients.length % PALETTE.length] };
+  const now = new Date().toISOString();
+  const client = { id: uid(), name, color: PALETTE[state.clients.length % PALETTE.length], createdAt: now, updatedAt: now };
   state.clients.push(client);
+  sync.changed('clients', client.id);
   save();
   render();
   return client;
@@ -334,7 +357,13 @@ function renderClientList() {
     color.type = 'color';
     color.value = c.color;
     color.setAttribute('aria-label', `Color for ${c.name}`);
-    color.addEventListener('input', () => { c.color = color.value; save(); render(); });
+    color.addEventListener('input', () => {
+      c.color = color.value;
+      c.updatedAt = new Date().toISOString();
+      sync.changed('clients', c.id);
+      save();
+      render();
+    });
 
     const name = document.createElement('input');
     name.type = 'text';
@@ -344,6 +373,8 @@ function renderClientList() {
       const v = name.value.trim();
       if (!v) { name.value = c.name; return; }
       c.name = v;
+      c.updatedAt = new Date().toISOString();
+      sync.changed('clients', c.id);
       save();
       render();
     });
@@ -363,7 +394,12 @@ function renderClientList() {
         : `Delete client "${c.name}"?`;
       if (!confirm(msg)) return;
       state.clients = state.clients.filter(x => x.id !== c.id);
-      state.projects.forEach(p => { if (p.clientId === c.id) p.clientId = ''; });
+      state.projects.forEach(p => {
+        if (p.clientId !== c.id) return;
+        p.clientId = '';
+        sync.changed('projects', p.id);
+      });
+      sync.removed('clients', c.id);
       save();
       render();
       renderClientList();
@@ -439,6 +475,7 @@ menu.addEventListener('click', e => {
   setMenu(false);
   if (action === 'export') exportData();
   if (action === 'import') $('#importFile').click();
+  if (action === 'signout') sync.signOut();
 });
 
 function exportData() {
@@ -459,8 +496,13 @@ $('#importFile').addEventListener('change', async e => {
   if (!file) return;
   try {
     const data = normalize(JSON.parse(await file.text()));
-    const msg = `Import ${data.projects.length} projects and ${data.clients.length} clients? This replaces what is on this device.`;
+    const msg = `Import ${data.projects.length} projects and ${data.clients.length} clients? This replaces your current board.`;
     if (!confirm(msg)) return;
+    const keep = { clients: new Set(data.clients.map(c => c.id)), projects: new Set(data.projects.map(p => p.id)) };
+    state.projects.forEach(p => { if (!keep.projects.has(p.id)) sync.removed('projects', p.id); });
+    state.clients.forEach(c => { if (!keep.clients.has(c.id)) sync.removed('clients', c.id); });
+    data.clients.forEach(c => sync.changed('clients', c.id));
+    data.projects.forEach(p => sync.changed('projects', p.id));
     state = data;
     save();
     render();
@@ -661,8 +703,12 @@ function reorder(id, status, visibleIds) {
 
   result.forEach((pid, i) => {
     const proj = state.projects.find(x => x.id === pid);
-    if (proj) proj.order = i;
+    if (proj && proj.order !== i) {
+      proj.order = i;
+      sync.changed('projects', pid);
+    }
   });
+  sync.changed('projects', id);
   if (moved) p.updatedAt = new Date().toISOString();
   save();
 }

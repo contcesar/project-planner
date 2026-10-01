@@ -19,6 +19,7 @@
 <body>
   <header class="topbar">
     <h1 class="brand">Planner</h1>
+    <span id="syncStatus" class="sync-status" hidden></span>
     <div class="filters">
       <input id="search" type="search" placeholder="Search projects" aria-label="Search projects">
       <select id="clientFilter" aria-label="Filter by client"></select>
@@ -30,11 +31,31 @@
       <div id="menu" class="menu" role="menu" hidden>
         <button type="button" role="menuitem" data-action="export">Export backup (JSON)</button>
         <button type="button" role="menuitem" data-action="import">Import backup</button>
+        <div id="accountInfo" class="menu-info" hidden></div>
+        <button type="button" role="menuitem" data-action="signout" id="signOutItem" hidden>Sign out</button>
       </div>
     </div>
   </header>
 
   <main id="board" class="board" aria-label="Kanban board"></main>
+
+  <!-- Sign in (shown only when Supabase is configured) -->
+  <div id="authScreen" class="auth-screen" hidden>
+    <form id="authForm" class="auth-card">
+      <img src="icons/icon.svg" alt="" width="56" height="56">
+      <h2>Sign in to Planner</h2>
+      <p class="muted">Your board syncs across all your devices.</p>
+      <label>Email
+        <input name="email" type="email" autocomplete="email" required>
+      </label>
+      <label>Password
+        <input name="password" type="password" autocomplete="current-password" minlength="6" required>
+      </label>
+      <p id="authMessage" class="auth-message" role="status"></p>
+      <button type="submit" class="btn primary" data-mode="signin">Sign in</button>
+      <button type="submit" class="btn ghost" data-mode="signup">Create account</button>
+    </form>
+  </div>
 
   <input id="importFile" type="file" accept="application/json,.json" hidden>
 
@@ -84,6 +105,9 @@
     </div>
   </dialog>
 
+  <script src="config.js"></script>
+  <script src="vendor/supabase-2.117.2.js"></script>
   <script src="app.js"></script>
+  <script src="cloud.js"></script>
 </body>
 </html>
