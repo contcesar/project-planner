@@ -49,9 +49,12 @@ Changes save on the device first, so the app stays fast and works offline. Anyth
 1. Create a free project at https://supabase.com.
 2. Open **SQL Editor → New query**, paste in `supabase/schema.sql`, and click **Run**. This creates the `clients` and `projects` tables, locks each row to its owner, and turns on live updates.
 3. Open **Project Settings → API**. Copy the **Project URL** and the **anon public** key into `config.js`.
-4. Open **Authentication → URL Configuration** and set **Site URL** to your GitHub Pages address. Confirmation emails link back there.
-5. Deploy, open the app, and click **Create account**. Confirm the email, then sign in.
-6. Optional but recommended: once your account exists, turn off **Allow new users to sign up** under **Authentication → Sign In / Providers**. Strangers then cannot create accounts. Row Level Security already keeps each account's data private either way.
+4. Open **Authentication → Sign In / Providers** and turn off **Allow new users to sign up**. Nobody can then create an account on their own.
+5. Open **Authentication → Users → Add user → Create new user**. Enter your email and a password, and tick **Auto Confirm User**. Repeat for anyone else who needs access.
+6. Open **Authentication → URL Configuration** and set **Site URL** to the address where the app is hosted.
+7. Deploy, open the app, and sign in.
+
+The sign-in screen has no "Create account" button. To show one, set `allowSignup: true` in `config.js`.
 
 The anon key is meant to be public. Row Level Security stops anyone from reading or changing data they do not own.
 

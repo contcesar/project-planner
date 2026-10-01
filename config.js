@@ -5,4 +5,7 @@
 window.PLANNER_CONFIG = {
   supabaseUrl: '',
   supabaseAnonKey: '',
+  // Show a "Create account" button on the sign-in screen.
+  // Keep false for a private board: add users in Supabase under Authentication → Users.
+  allowSignup: false,
 };

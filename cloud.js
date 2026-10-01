@@ -34,6 +34,8 @@
   const authMessage = $('#authMessage');
   const statusEl = $('#syncStatus');
 
+  authForm.querySelector('[data-mode=signup]').hidden = !config.allowSignup;
+
   let user = null;
   let channel = null;
   let flushing = false;
@@ -256,7 +258,7 @@
 
   authForm.addEventListener('submit', async e => {
     e.preventDefault();
-    const mode = e.submitter?.dataset.mode || 'signin';
+    const mode = config.allowSignup && e.submitter?.dataset.mode === 'signup' ? 'signup' : 'signin';
     const email = authForm.elements.email.value.trim();
     const password = authForm.elements.password.value;
     const buttons = authForm.querySelectorAll('button');
