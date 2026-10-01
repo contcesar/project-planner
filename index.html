@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Project Planner</title>
+  <meta name="description" content="Kanban board for tracking projects and the clients they belong to.">
+  <meta name="theme-color" content="#f4f5f8" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#15171c" media="(prefers-color-scheme: dark)">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Planner">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <h1 class="brand">Planner</h1>
+    <div class="filters">
+      <input id="search" type="search" placeholder="Search projects" aria-label="Search projects">
+      <select id="clientFilter" aria-label="Filter by client"></select>
+    </div>
+    <div class="actions">
+      <button id="clientsBtn" class="btn ghost" type="button">Clients</button>
+      <button id="menuBtn" class="btn ghost" type="button" aria-haspopup="menu" aria-expanded="false" aria-label="More">⋯</button>
+      <button id="addBtn" class="btn primary" type="button">+ Project</button>
+      <div id="menu" class="menu" role="menu" hidden>
+        <button type="button" role="menuitem" data-action="export">Export backup (JSON)</button>
+        <button type="button" role="menuitem" data-action="import">Import backup</button>
+      </div>
+    </div>
+  </header>
+
+  <main id="board" class="board" aria-label="Kanban board"></main>
+
+  <input id="importFile" type="file" accept="application/json,.json" hidden>
+
+  <!-- Project editor -->
+  <dialog id="projectDialog" class="sheet">
+    <form id="projectForm" method="dialog">
+      <h2 id="projectDialogTitle">New project</h2>
+      <label>Project name
+        <input name="title" required maxlength="140" autocomplete="off">
+      </label>
+      <label>Client
+        <select name="clientId"></select>
+      </label>
+      <div class="row">
+        <label>Status
+          <select name="status"></select>
+        </label>
+        <label>Due date
+          <input name="due" type="date">
+        </label>
+      </div>
+      <label>Notes
+        <textarea name="notes" rows="5"></textarea>
+      </label>
+      <div class="dialog-actions">
+        <button type="button" class="btn danger" id="deleteProjectBtn">Delete</button>
+        <span class="spacer"></span>
+        <button type="button" class="btn ghost" data-close>Cancel</button>
+        <button type="submit" class="btn primary">Save</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Clients manager -->
+  <dialog id="clientsDialog" class="sheet">
+    <div class="dialog-body">
+      <h2>Clients</h2>
+      <form id="newClientForm" class="new-client">
+        <input name="name" placeholder="New client name" required maxlength="80" autocomplete="off" aria-label="New client name">
+        <button type="submit" class="btn primary">Add</button>
+      </form>
+      <ul id="clientList" class="client-list"></ul>
+      <div class="dialog-actions">
+        <span class="spacer"></span>
+        <button type="button" class="btn ghost" data-close>Done</button>
+      </div>
+    </div>
+  </dialog>
+
+  <script src="app.js"></script>
+</body>
+</html>
